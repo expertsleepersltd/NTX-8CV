@@ -104,6 +104,11 @@ div.upload {
 h1 {
     margin-block-end: 0;
 }
+div.warning {
+	background: #f0d0d0;
+	padding: 0.5em;
+	width: 500px;
+}
 </style>
 
 <script>
@@ -667,17 +672,17 @@ function makeSysEx() {
 		c += 8;
 	}
 	// keyboard mappings
-	for ( var i = 1; i < 33; ++i ) {
+	for ( var i = 1; i <= 32; ++i ) {
 		var gtid = "kbd_" + i;
 		arr[c+0] = document.getElementById( gtid + "_type" ).value;
 		arr[c+1] = document.getElementById( gtid + "_output" ).value;
 		arr[c+2] = document.getElementById( gtid + "_key" ).value;
 		arr[c+3] = 0;
-		var v = document.getElementById( gtid + "_value0" ).value;
+		var v = parseInt( document.getElementById( gtid + "_value0" ).value ) + 10000;
 		v = sysexSafeShort( v );
 		arr[c+4] = v & 0x7f;
 		arr[c+5] = v >> 8;
-		var v = document.getElementById( gtid + "_value1" ).value;
+		var v = parseInt( document.getElementById( gtid + "_value1" ).value ) + 10000;
 		v = sysexSafeShort( v );
 		arr[c+6] = v & 0x7f;
 		arr[c+7] = v >> 8;
@@ -746,6 +751,13 @@ function makeSysEx() {
 		let h = document.getElementById( "srr_change_" + i ).value;
 		let t = document.getElementById( "srr_trigger_" + i ).value;
 		arr[c] = ( ( h & 0x80 ) ? 1 : 0 ) | ( ( t & 0x80 ) ? 2 : 0 );
+		c += 1;
+	}
+	for ( var i = 1; i <= 32; ++i ) {
+		var gtid = "kbd_" + i;
+		let v0 = parseInt( document.getElementById( gtid + "_value0" ).value ) + 10000;
+		let v1 = parseInt( document.getElementById( gtid + "_value1" ).value ) + 10000;
+		arr[c] = ( ( v0 >> 14 ) & 1 ) | ( ( ( v1 >> 14 ) & 1 ) << 1 );
 		c += 1;
 	}
 
@@ -1126,6 +1138,7 @@ function showHide( id, show ) {
 for ( let i=0; i<127; ++i ) {
 	document.write( "<option value=" + i + ">" + i + "</option>" );
 }
+document.write( "<option value=127>Any</option>" );
 </script>
 </select>
 <label for="show_log">Log:</label><input id='show_log' type='checkbox' onchange='showLog()'>
@@ -1188,38 +1201,53 @@ settings.push( [ "Nudge amount", 19, setEnumRange, 1, 100 ] );
 settings.push( [ "Send all CCs on preset load", 20, setBool ] );
 settings.push( [ "Always load direct levels", 21, setBool ] );
 settings.push( [ "Max smoothing", 22, setEnumRange, 1, 100 ] );
-function buildSettings( first, last ) {
+settings.push( [ "Enable NTX-8CV to be USB host", 23, setBool ] );
+settings.push( [ "SysEx Device ID", 24, setEnumRange, 0, 126 ] );
+settings.push( [ "Allow USB audio host to change sample rate", 25, setBool ] );
+settings.push( [ "Sample rate", 26, setEnum, [ "32kHz", "44.1kHz", "48kHz", "88.2kHz", "96kHz" ] ] );
+function buildSettings( ranges ) {
+	if ( !Array.isArray( ranges[0] ) ) {
+		ranges = [ ranges ];
+	}
 	document.write( "<table>" );
-	for ( let i=first; i<=last; ++i ) {
-		document.write( "<tr class=" + ((i&1)?"b":"a") + ">" );
-		document.write( "<td>" + settings[i][setName] + "</td><td>" );
-		let type = settings[i][setType];
-		if ( type == setBool ) {
-			document.write( "<input type='checkbox' id=set" + settings[i][setID] + " onchange=changeSettingBool(" + i + ")></input>" );
-		} else if ( type == setEnum ) {
-			document.write( "<select id=set" + settings[i][setID] + " onchange=changeSetting(" + i + ")>" );
-			let e = settings[i][setEnumValues];
-			for ( let j=0; j<e.length; ++j ) {
-				document.write( "<option value=" + j + ">" + e[j] + "</option>" );
-			}
-			document.write( "</select>" );
-		} else if ( type == setEnumRange ) {
-			document.write( "<select id=set" + settings[i][setID] + " onchange=changeSetting(" + i + ")>" );
-			let min = settings[i][setEnumMin];
-			let max = settings[i][setEnumMax];
-			for ( let j=min; j<=max; ++j ) {
-				document.write( "<option value=" + j + ">" + j + "</option>" );
-			}
-			document.write( "</select>" );
+	let c = 0;
+	for ( let range of ranges ) {
+		if ( range.length == 1 ) {
+			range = [ range[0], range[0] ];
 		}
-		document.write( "</td>" );
-		document.write( "</tr>" );
+		for ( let i=range[0]; i<=range[1]; ++i ) {
+			document.write( "<tr class=" + (c?"b":"a") + ">" );
+			c = 1 - c;
+			document.write( "<td>" + settings[i][setName] + "</td><td>" );
+			let type = settings[i][setType];
+			if ( type == setBool ) {
+				document.write( "<input type='checkbox' id=set" + settings[i][setID] + " onchange=changeSettingBool(" + i + ")></input>" );
+			} else if ( type == setEnum ) {
+				document.write( "<select id=set" + settings[i][setID] + " onchange=changeSetting(" + i + ")>" );
+				let e = settings[i][setEnumValues];
+				for ( let j=0; j<e.length; ++j ) {
+					document.write( "<option value=" + j + ">" + e[j] + "</option>" );
+				}
+				document.write( "</select>" );
+			} else if ( type == setEnumRange ) {
+				document.write( "<select id=set" + settings[i][setID] + " onchange=changeSetting(" + i + ")>" );
+				let min = settings[i][setEnumMin];
+				let max = settings[i][setEnumMax];
+				for ( let j=min; j<=max; ++j ) {
+					document.write( "<option value=" + j + ">" + j + "</option>" );
+				}
+				document.write( "</select>" );
+			}
+			document.write( "</td>" );
+			document.write( "</tr>" );
+		}
 	}
 	document.write( "</table>" );
 }
 document.write( "<h3>MIDI/CV settings</h3>" );
-buildSettings( 10, 22 );
-document.write( "<h3>USB audio settings</h3>" );
+buildSettings( [ 10, 22 ] );
+document.write( "<h3>USB settings</h3>" );
+buildSettings( [ [ 23 ], [ 25 ] ] );
 document.write( "<table><tr><td rowspan=2>Enable audio channel:</td>" );
 for ( let i=0; i<8; ++i ) {
 	document.write( "<th>" + (1+i) + "</th>" );
@@ -1230,7 +1258,14 @@ for ( let i=0; i<8; ++i ) {
 }
 document.write( "</tr></table>" );
 document.write( "<h3>disting NT expander settings</h3>" );
-buildSettings( 0, 1 );
+buildSettings( [ 0, 1 ] );
+</script>
+<h3>Global settings</h3>
+<div class='warning'>
+Warning - changing the SysEx Device ID will cause the tool to lose communication with the module, unless the SysEX ID field at the top of the page is set to the matching value, or set to 'Any'.
+</div>
+<script>
+buildSettings( [ [ 24 ], [ 26 ] ] );
 function refreshSettings() {
 	let output = midi.outputs.get( document.getElementById( "midioutput" ).value );
 	for ( let i=0; i<settings.length; ++i ) {
@@ -1250,7 +1285,22 @@ function resetSettings() {
 		refreshSettings();
 	}
 }
+function reboot( bootloader ) {
+	let output = midi.outputs.get( document.getElementById( "midioutput" ).value );
+	let arr = [ 0xF0, 0x00, 0x21, 0x27, 0x6A, sysExId, 0x7F ];
+	if ( bootloader ) {
+		arr.push( 0x7F );
+	}
+	arr.push( 0xF7 );
+	output.send( arr );
+	let dd = log( "sent reboot request to NTX-8CV" );
+	dumpSysex( arr, "txSysex", dd+"\n" );
+}
 </script>
+<h3>Firmware update</h3>
+<button onclick="reboot(0)">Reboot</button>
+<br>
+<button onclick="reboot(1)">Reboot in bootloader mode</button>
 </div>
 
 <div id="div_midicv" style="display:none;">
@@ -2462,10 +2512,10 @@ param_label = "smoothing";
 		document.write( "</select></td>" );
 		id = "kbd_" + i + "_value0";
 		document.write( "<td><label class='hidden' for='" + id + "'>Value 0 (Keyboard " + i + ")</label>");
-		document.write( "<input onchange='changeGateLevel(\"" + id + "\")' type='text' id='" + id + "' min=0 max=16383 size=5 type='number' value='0'></td>" );
+		document.write( "<input onchange='send()' id='" + id + "' min='-10000' max='10000' size=5 type='number' value='0'></td>" );
 		id = "kbd_" + i + "_value1";
 		document.write( "<td><label class='hidden' for='" + id + "'>Value 1 (Keyboard " + i + ")</label>");
-		document.write( "<input onchange='changeGateLevel(\"" + id + "\")' type='text' id='" + id + "' min=0 max=16383 size=5 type='number' value='16383'></td>" );
+		document.write( "<input onchange='send()' id='" + id + "' min='-10000' max='10000' size=5 type='number' value='0'></td>" );
 	}
 </script>
 </table>
@@ -3488,15 +3538,13 @@ function parseConfigDump( data ) {
 		c += 8;
 	}
 	// keyboard mappings
-	for ( var i = 1; i < 33; ++i ) {
+	let kbm = [];
+	for ( var i = 1; i <= 32; ++i ) {
 		var gtid = "kbd_" + i;
 		document.getElementById( gtid + "_type" ).value = data[c+0];
 		document.getElementById( gtid + "_output" ).value = data[c+1];
 		document.getElementById( gtid + "_key" ).value = data[c+2];
-		var v = unSysexSafeShort( data[c+4] | ( data[c+5] << 8 ) );
-		document.getElementById( gtid + "_value0" ).value = v;
-		var v = unSysexSafeShort( data[c+6] | ( data[c+7] << 8 ) );
-		document.getElementById( gtid + "_value1" ).value = v;
+		kbm.push( [ unSysexSafeShort( data[c+4] | ( data[c+5] << 8 ) ), unSysexSafeShort( data[c+6] | ( data[c+7] << 8 ) ) ] )
 		c += 8;
 	}
 	// lfo resets
@@ -3554,6 +3602,14 @@ function parseConfigDump( data ) {
 		if ( data[c] & 2 ) {
 			document.getElementById( "srr_trigger_" + i ).value = -1;
 		}
+		c += 1;
+	}
+	for ( var i = 1; i <= 32; ++i ) {
+		let gtid = "kbd_" + i;
+		let v0 = kbm[i-1][0] | ( ( data[c] & 1 ) << 14 );
+		let v1 = kbm[i-1][1] | ( ( data[c] & 2 ) << 13 );
+		document.getElementById( gtid + "_value0" ).value = v0 - 10000;
+		document.getElementById( gtid + "_value1" ).value = v1 - 10000;
 		c += 1;
 	}
 }
@@ -3758,7 +3814,6 @@ var midi, data;
 function onMIDISuccess(midiAccess) {
 	log( "midi access granted" );
     status("OK");
-	document.getElementById("sysExId").selectedIndex = sysExId;
     midi = midiAccess;
     midi.onstatechange = onStateChange;
     onStateChange(null);
@@ -3825,11 +3880,14 @@ function changeOutput() {
 }
 function onMIDIMessage(message) {
     data = message.data;
-    let header = [ 240, 0, 33, 39, 0x6A, sysExId ];
-    for ( var i=0; i<6; ++i ) {
+    let header = [ 240, 0, 33, 39, 0x6A ];
+    for ( let i=0; i<5; ++i ) {
     	if ( header[i] != data[i] ) {
     		return;
     	}
+    }
+    if ( sysExId != 127 && data[5] != sysExId ) {
+    	return;
     }
 	var dd = log( "received sysex (" + data.length + " bytes)" );
 	dumpSysex( data, "rxSysex", dd+"\n" );
@@ -4048,6 +4106,7 @@ if(!localStorage.getItem(dexSysExKey)) {  // No system exclusive ID stored
     localStorage.setItem(dexSysExKey, 0);
 }
 sysExId = localStorage.getItem(dexSysExKey);
+document.getElementById("sysExId").value = sysExId;
 
 const themeKey = 'ntx8cvTheme';
 if ( localStorage.getItem( themeKey ) ) {
