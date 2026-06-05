@@ -1195,7 +1195,7 @@ for ( let i=1; i<=16; ++i ) {
 settings.push( [ "MIDI channel for configuration Program Change", 14, setEnum, midiCh ] );
 settings.push( [ "Ignore MIDI clock", 15, setBool ] );
 settings.push( [ "Enable MMC (MIDI Machine Control)", 16, setBool ] );
-settings.push( [ "Enable MIDI clock out", 17, setBool ] );
+settings.push( [ "Enable MIDI clock out", 17, setEnum, [ "Off", "On", "Clocks only" ] ] );
 settings.push( [ "14 bit CC byte order", 18, setEnum, [ "LSB first", "MSB first" ] ] );
 settings.push( [ "Nudge amount", 19, setEnumRange, 1, 100 ] );
 settings.push( [ "Send all CCs on preset load", 20, setBool ] );
