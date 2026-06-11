@@ -579,7 +579,7 @@ function unSysexSafeSignedChar( v ) {
 }
 function makeSysEx() {
 	var arr = new Uint8Array( 8192 );
-	var d = [0xF0, 0x00, 0x21, 0x27, 0x6A, sysExId, 0x10, 0x00]
+	var d = [0xF0, 0x00, 0x21, 0x27, 0x6A, sysExId, 0x10]
 	var len = d.length
 	for ( var i = 0; i < len; ++i ) {
 		arr[i] = d[i];
@@ -767,7 +767,7 @@ function makeSysEx() {
 }
 function makePresetSysEx() {
 	var arr = new Uint8Array( 8192 );
-	var d = [0xF0, 0x00, 0x21, 0x27, 0x6A, sysExId, 0x13, 0x00]
+	var d = [0xF0, 0x00, 0x21, 0x27, 0x6A, sysExId, 0x13]
 	var len = d.length
 	for ( var i = 0; i < len; ++i ) {
 		arr[i] = d[i];
@@ -3001,6 +3001,9 @@ for ( let i=0; i<8; ++i ) {
 	document.write( "<td id=calib_s_" + i + "></td>" );
 	document.write( "</tr>" );
 }
+function sf( s ) {
+	return s.toString().slice( 0, 6 );
+}
 function handleCalibrationData( data ) {
 	let c = 0;
 	for ( let i=0; i<8; ++i ) {
@@ -3008,8 +3011,14 @@ function handleCalibrationData( data ) {
 		c += 5;
 		let E = IEEEToFloat( data[c] | ( data[c+1] << 7 ) | ( data[c+2] << 14 ) | ( data[c+3] << 21 ) | ( data[c+4] << 28 ) );
 		c += 5;
-		document.getElementById( "calib_o_" + i ).innerHTML = D * (1.0/0x7fffffff);
-		document.getElementById( "calib_s_" + i ).innerHTML = 0x7fffffff / E;
+		D = D * (1.0/0x7fffffff);
+		E = 0x7fffffff / E;
+		let e = document.getElementById( "calib_o_" + i );
+		e.innerHTML = sf( D );
+		e.style.background = ( Math.abs( D ) < 0.01 ) ? "lightgreen" : "red";
+		e = document.getElementById( "calib_s_" + i );
+		e.innerHTML = sf( E );
+		e.style.background = ( Math.abs( E - 11 ) < 0.1 ) ? "lightgreen" : "red";
 	}
 }
 </script>
@@ -4049,7 +4058,7 @@ function handleFileSelect(evt,id) {
 				|| arr[2] != 0x21
 				|| arr[3] != 0x27
 				|| arr[4] != 0x6A
-				|| arr[5] != 0x10
+				|| arr[6] != 0x10
 				|| arr[arr.length-1] != 0xF7 ) {
 				alert( "Not a valid config dump file" );
 				console.log( arr );
@@ -4063,9 +4072,10 @@ function handleFileSelect(evt,id) {
 }
 document.getElementById('chooseConfig').addEventListener('change', handleFileSelect, false);
 function loadConfig() {
-	if ( chosenConfig.length >= 7 ) {
-		parseConfigDump( chosenConfig.slice( 8, -1 ) );
+	if ( chosenConfig.length >= 6 ) {
+		parseConfigDump( chosenConfig.slice( 7, -1 ) );
     	let dd = log( "loaded config from file" );
+    	send();
 	}
 }
 var configBlob = null;
