@@ -1205,6 +1205,7 @@ settings.push( [ "Enable NTX-8CV to be USB host", 23, setBool ] );
 settings.push( [ "SysEx Device ID", 24, setEnumRange, 0, 126 ] );
 settings.push( [ "Allow USB audio host to change sample rate", 25, setBool ] );
 settings.push( [ "Sample rate", 26, setEnum, [ "32kHz", "44.1kHz", "48kHz", "88.2kHz", "96kHz" ] ] );
+settings.push( [ "Mode", 27, setEnum, [ "CV (8x8)", "Audio 32 bit (1x8)", "Audio 16 bit (2x8)" ] ] );
 function buildSettings( ranges ) {
 	if ( !Array.isArray( ranges[0] ) ) {
 		ranges = [ ranges ];
@@ -1216,7 +1217,7 @@ function buildSettings( ranges ) {
 			range = [ range[0], range[0] ];
 		}
 		for ( let i=range[0]; i<=range[1]; ++i ) {
-			document.write( "<tr class=" + (c?"b":"a") + ">" );
+			document.write( "<tr class=" + (c?"b":"a") + " id=setr" + settings[i][setID] + ">" );
 			c = 1 - c;
 			document.write( "<td>" + settings[i][setName] + "</td><td>" );
 			let type = settings[i][setType];
@@ -1258,7 +1259,8 @@ for ( let i=0; i<8; ++i ) {
 }
 document.write( "</tr></table>" );
 document.write( "<h3>disting NT expander settings</h3>" );
-buildSettings( [ 0, 1 ] );
+buildSettings( [ [ 27 ], [ 0, 1 ] ] );
+document.getElementById( "setr27" ).innerHTML += "<td>Requires reboot when changed</td>";
 </script>
 <h3>Global settings</h3>
 <div class='warning'>
@@ -1266,6 +1268,7 @@ Warning - changing the SysEx Device ID will cause the tool to lose communication
 </div>
 <script>
 buildSettings( [ [ 24 ], [ 26 ] ] );
+document.getElementById( "setr26" ).innerHTML += "<td>Requires reboot when changed</td>";
 function refreshSettings() {
 	let output = midi.outputs.get( document.getElementById( "midioutput" ).value );
 	for ( let i=0; i<settings.length; ++i ) {
@@ -3905,6 +3908,11 @@ function onMIDIMessage(message) {
 	    let str = String.fromCharCode.apply( null, data.slice( 7, -2 ) );
 		document.getElementById( "rxSysex" ).value += ( "\n-----\n" + str );
 		window.alert( str );
+	}
+	else if ( data[6] == 0x30 ) {
+		// debug string
+	    let str = String.fromCharCode.apply( null, data.slice( 7, -2 ) );
+		document.getElementById( "rxSysex" ).value = str;
 	}
 	else if ( data[6] == 0x10 ) {
 		// config dump
